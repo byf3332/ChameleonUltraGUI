@@ -620,15 +620,23 @@ Future<(HFCardInfo, MifareClassicInfo, MifareUltralightInfo)> readHFInfo(
 
   try {
     TagType type = TagType.unknown;
-
-    if (!await appState.communicator!.detectMf1Support()) {
+    
+    final bool mf1Detected = await appState.communicator!.detectMf1Support();
+    final bool sakHasClassicBit = (card.sak & 0x08) != 0;
+    
+    if (mf1Detected || sakHasClassicBit) {
+      if (context.mounted) {
+        (type, mfcInfo) = await performMifareClassicScan(
+          appState.communicator!,
+          mfcInfo,
+          context,
+          updateMifareClassicRecovery,
+          override: mf1Detected ? null : TagType.mifare1K,
+        );
+      }
+    } else {
       (type, mfuInfo) =
           await performMifareUltralightScan(appState.communicator!, mfuInfo);
-    } else {
-      if (context.mounted) {
-        (type, mfcInfo) = await performMifareClassicScan(appState.communicator!,
-            mfcInfo, context, updateMifareClassicRecovery);
-      }
     }
 
     hfInfo.uid = bytesToHexSpace(card.uid);
