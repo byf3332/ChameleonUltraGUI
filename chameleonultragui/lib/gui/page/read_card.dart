@@ -393,7 +393,14 @@ class ReadCardPageState extends State<ReadCardPage> {
                                                         updateMifareClassicRecovery,
                                                         override: newValue);
                                                 setState(() {
+                                                  hfInfo.type = info.$1;
+                                                  hfInfo.tech = chameleonTagToString(info.$1, localizations) +
+                                                      (info.$2.isEV1 ? " EV1" : "");
+                                                
                                                   mfcInfo = info.$2;
+                                                  mfcInfo.state = (mfcInfo.type != MifareClassicType.none)
+                                                      ? MifareClassicState.checkKeys
+                                                      : MifareClassicState.none;
                                                 });
                                               } else if (isMifareUltralight(
                                                   newValue)) {
