@@ -401,6 +401,11 @@ class ReadCardPageState extends State<ReadCardPage> {
                                                   mfcInfo.state = (mfcInfo.type != MifareClassicType.none)
                                                       ? MifareClassicState.checkKeys
                                                       : MifareClassicState.none;
+                                                  final sakValue = int.tryParse(
+                                                      hfInfo.sak.replaceAll(' ', ''),
+                                                      radix: 16);
+                                                  mfcInfo.recovery?.skipRatsForSak28 =
+                                                      sakValue == 0x28;
                                                 });
                                               } else if (isMifareUltralight(
                                                   newValue)) {
