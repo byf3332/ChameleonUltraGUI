@@ -419,6 +419,34 @@ class ChameleonCommunicator {
     return resp!.status == 0 ? resp.data.sublist(1) : null;
   }
 
+  bool _isDeviceSuccessStatus(int status) {
+    return status == 0 || status == 0x68;
+  }
+
+  Future<Uint8List?> hf14aGetConfig() async {
+    var resp = await sendCmd(ChameleonCommand.hf14aGetConfig);
+
+    if (resp == null || !_isDeviceSuccessStatus(resp.status)) {
+      return null;
+    }
+
+    if (resp.data.length != 4) {
+      return null;
+    }
+
+    return Uint8List.fromList(resp.data);
+  }
+
+  Future<bool> hf14aSetConfig(Uint8List config) async {
+    if (config.length != 4) {
+      return false;
+    }
+
+    var resp = await sendCmd(ChameleonCommand.hf14aSetConfig, data: config);
+
+    return resp != null && _isDeviceSuccessStatus(resp.status);
+  }
+
   Future<Uint8List> mf1ReadBlock(int block, int keyType, Uint8List key) async {
     // Read block
     // keyType 0x60 if A key, 0x61 B key
