@@ -43,6 +43,7 @@ class MifareClassicRecovery {
   void Function() update;
   MifareClassicType mifareClassicType;
   bool isMifareClassicEV1;
+  bool skipRatsForSak28;
 
   MifareClassicRecovery(
       {required this.appState,
@@ -56,6 +57,7 @@ class MifareClassicRecovery {
       this.selectedDictionary,
       this.mifareClassicType = MifareClassicType.none,
       this.isMifareClassicEV1 = false,
+      this.skipRatsForSak28 = false,
       List<ChameleonKeyCheckmark>? checkMarks,
       List<Uint8List>? validKeys,
       List<Uint8List>? cardData})
@@ -64,6 +66,46 @@ class MifareClassicRecovery {
         validKeys = validKeys ?? List.generate(80, (_) => Uint8List(0)),
         cardData = cardData ?? List.generate(256, (_) => Uint8List(0)) {
     initializeEV1();
+  }
+
+  Future<T> _runWithOptionalSkipRatsForSak28<T>(
+      Future<T> Function() action) async {
+    if (!skipRatsForSak28) {
+      return await action();
+    }
+
+    Uint8List? oldConfig;
+    try {
+      oldConfig = await appState.communicator!.hf14aGetConfig();
+    } catch (_) {
+      return await action();
+    }
+
+    if (oldConfig == null || oldConfig.length != 4) {
+      return await action();
+    }
+
+    final newConfig = Uint8List.fromList(oldConfig);
+    newConfig[3] = 2;
+
+    bool changed;
+    try {
+      changed = await appState.communicator!.hf14aSetConfig(newConfig);
+    } catch (_) {
+      changed = false;
+    }
+
+    if (!changed) {
+      return await action();
+    }
+
+    try {
+      return await action();
+    } finally {
+      try {
+        await appState.communicator!.hf14aSetConfig(oldConfig);
+      } catch (_) {}
+    }
   }
 
   Future<bool> checkKeysOnSector(
@@ -80,10 +122,12 @@ class MifareClassicRecovery {
       int totalChunks = keys.partition(chunkSize).length;
 
       for (var chunk in keys.partition(chunkSize)) {
-        key = await appState.communicator!.mf1AuthMultipleKeys(
-            mfClassicGetSectorTrailerBlockBySector(sector),
-            0x60 + keyType,
-            chunk);
+        key = await _runWithOptionalSkipRatsForSak28(() {
+          return appState.communicator!.mf1AuthMultipleKeys(
+              mfClassicGetSectorTrailerBlockBySector(sector),
+              0x60 + keyType,
+              chunk);
+        });
         if (key != null) {
           setKeyAsFound(sector, keyType, key);
           keyCheckProgress = null;
