@@ -76,6 +76,8 @@ enum ChameleonCommand {
   mf1StaticEncryptedNestedAcquire(2014),
   mf1CheckKeysOnBlock(2015),
   hf14ARawCommand(2010),
+  hf14aGetConfig(2200),
+  hf14aSetConfig(2201),
   hf14aSniff(2020),
 
   // lf commands
